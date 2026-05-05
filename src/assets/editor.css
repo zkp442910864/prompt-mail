@@ -1,0 +1,40 @@
+/* Tiptap 编辑器样式 */
+.tiptap-reply-editor .tiptap {
+  padding: 8px 12px;
+  min-height: 100px;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.tiptap-reply-editor .tiptap p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap-reply-editor .tiptap p {
+  margin-bottom: 0.5em;
+}
+
+.tiptap-reply-editor .tiptap ul,
+.tiptap-reply-editor .tiptap ol {
+  padding-left: 1.5em;
+}
+
+/* 邮件正文样式 */
+.mail-body img {
+  max-width: 100%;
+}
+
+.mail-body table {
+  border-collapse: collapse;
+}
+
+.mail-body td,
+.mail-body th {
+  border: 1px solid #ddd;
+  padding: 4px 8px;
+}
