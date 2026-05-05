@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import { marked } from 'marked'
 import Placeholder from '@tiptap/extension-placeholder'
 import AiGenerateBtn from '@/features/ai/components/AiGenerateBtn'
 import AiResultModal from '@/features/ai/components/AiResultModal'
@@ -102,7 +103,9 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
   }, [])
 
   const handleUseContent = useCallback((content: string) => {
-    editor?.commands.setContent(content)
+    // AI 返回的内容是 Markdown 格式，需转为 HTML 后填入富文本编辑器
+    const html = marked.parse(content, { async: false }) as string
+    editor?.commands.setContent(html)
     setAiResultVisible(false)
     message.success('已填入回复内容')
   }, [editor])

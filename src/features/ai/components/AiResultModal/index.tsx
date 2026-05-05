@@ -3,6 +3,7 @@ import { Modal, Tabs, Button, message, Tooltip } from 'antd'
 import { CopyOutlined, GlobalOutlined, TranslationOutlined } from '@ant-design/icons'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import { marked } from 'marked'
 
 interface AiResultModalProps {
   visible: boolean
@@ -12,38 +13,32 @@ interface AiResultModalProps {
   onClose: () => void
 }
 
-function ReadOnlyEditor({ content }: { content: string }) {
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content,
-    editable: false,
-  })
-
-  if (!editor) return null
-
-  return (
-    <div className="rounded-lg overflow-hidden border border-solid border-gray-200">
-      <div className="p-4 max-h-80 overflow-auto bg-gray-50">
-        <EditorContent editor={editor} className="tiptap-readonly-editor" />
-      </div>
-    </div>
-  )
+/** 将 Markdown 文本转为 HTML */
+function markdownToHtml(md: string): string {
+  try {
+    return marked.parse(md, { async: false }) as string
+  } catch {
+    // 如果解析失败，包裹在 <pre> 中保留原文
+    return `<pre style="white-space:pre-wrap">${md}</pre>`
+  }
 }
 
-function ChineseReadOnlyEditor({ content }: { content: string }) {
+/** 只读富文本编辑器 */
+function ReadOnlyEditor({ content, bgClass }: { content: string; bgClass: string }) {
+  // 将 Markdown 内容转为 HTML 供 TipTap 渲染
+  const htmlContent = useMemo(() => markdownToHtml(content), [content])
+
   const editor = useEditor({
     extensions: [StarterKit],
-    content,
+    content: htmlContent,
     editable: false,
   })
 
   if (!editor) return null
 
   return (
-    <div className="rounded-lg overflow-hidden border border-amber-200">
-      <div className="p-4 max-h-80 overflow-auto bg-amber-50">
-        <EditorContent editor={editor} className="tiptap-readonly-editor" />
-      </div>
+    <div className={`rounded-lg p-4 max-h-80 overflow-auto ${bgClass}`}>
+      <EditorContent editor={editor} className="tiptap-readonly-editor" />
     </div>
   )
 }
@@ -119,7 +114,7 @@ export default function AiResultModal({
               />
             </Tooltip>
           </div>
-          <ReadOnlyEditor content={originalPart} />
+          <ReadOnlyEditor content={originalPart} bgClass="bg-gray-50 border border-solid border-gray-200 rounded-lg" />
         </div>
       ),
     },
@@ -142,7 +137,7 @@ export default function AiResultModal({
               />
             </Tooltip>
           </div>
-          <ChineseReadOnlyEditor content={chinesePart} />
+          <ReadOnlyEditor content={chinesePart} bgClass="bg-amber-50 border border-amber-200 rounded-lg" />
         </div>
       ),
     },
