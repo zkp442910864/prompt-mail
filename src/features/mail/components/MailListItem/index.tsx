@@ -1,8 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import dayjs from 'dayjs'
 import {
-  StarOutlined,
-  StarFilled,
   PaperClipOutlined,
 } from '@ant-design/icons'
 import { Checkbox } from 'antd'
@@ -18,12 +16,6 @@ interface MailListItemProps {
 
 export default function MailListItem({ mail, selected, checked, onCheck, onClick }: MailListItemProps) {
   const isUnread = !mail.isRead
-  const [starred, setStarred] = useState(false)
-
-  const handleStarClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    setStarred((prev) => !prev)
-  }, [])
 
   const handleCheckChange = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -61,15 +53,6 @@ export default function MailListItem({ mail, selected, checked, onCheck, onClick
       {/* 未读指示点 */}
       <span className="shrink-0 w-4 flex items-center justify-center">
         {isUnread && <span className="w-2 h-2 rounded-full bg-blue-500" />}
-      </span>
-
-      {/* 星标 */}
-      <span className="shrink-0 w-6 flex items-center justify-center" onClick={handleStarClick}>
-        {starred ? (
-          <StarFilled className="text-amber-400 text-sm" />
-        ) : (
-          <StarOutlined className="text-gray-300 text-sm hover:text-amber-400" />
-        )}
       </span>
 
       {/* 发件人 */}

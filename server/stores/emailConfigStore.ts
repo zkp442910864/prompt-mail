@@ -62,10 +62,26 @@ export function getById(id: string): EmailConfig | undefined {
   return { ...config, authCode: decrypt(config.authCode) }
 }
 
-/** 保存邮箱配置（新建或更新） */
+/** 保存邮箱配置（单条模式：已有则更新，否则新建） */
 export function save(data: CreateEmailConfig): EmailConfig {
   const configs = readAll()
   const now = new Date().toISOString()
+
+  if (configs.length > 0) {
+    // 更新已有配置
+    const index = 0
+    const updated = {
+      ...configs[index]!,
+      ...data,
+      authCode: encrypt(data.authCode),
+      updatedAt: now,
+    }
+    configs[index] = updated
+    writeAll(configs)
+    return { ...updated, authCode: data.authCode }
+  }
+
+  // 新建配置
   const newConfig: EmailConfig = {
     id: uuidv4(),
     ...data,

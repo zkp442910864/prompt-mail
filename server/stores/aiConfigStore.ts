@@ -62,10 +62,26 @@ export function getById(id: string): AIConfig | undefined {
   return { ...config, apiKey: decrypt(config.apiKey) }
 }
 
-/** 保存 AI 配置 */
+/** 保存 AI 配置（单条模式：已有则更新，否则新建） */
 export function save(data: CreateAIConfig): AIConfig {
   const configs = readAll()
   const now = new Date().toISOString()
+
+  if (configs.length > 0) {
+    // 更新已有配置
+    const index = 0
+    const updated = {
+      ...configs[index]!,
+      ...data,
+      apiKey: encrypt(data.apiKey),
+      updatedAt: now,
+    }
+    configs[index] = updated
+    writeAll(configs)
+    return { ...updated, apiKey: data.apiKey }
+  }
+
+  // 新建配置
   const newConfig: AIConfig = {
     id: uuidv4(),
     ...data,

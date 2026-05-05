@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { Button, message, Tooltip } from 'antd'
+import { Button, message, Tooltip, Upload } from 'antd'
+import type { UploadFile } from 'antd'
 import {
   SendOutlined,
   MinusOutlined,
@@ -7,6 +8,8 @@ import {
   CompressOutlined,
   CloseOutlined,
   EditOutlined,
+  InboxOutlined,
+  PaperClipOutlined,
 } from '@ant-design/icons'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -30,6 +33,8 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
   const [aiResultVisible, setAiResultVisible] = useState(false)
   const [aiOriginalContent, setAiOriginalContent] = useState('')
   const [aiChineseContent, setAiChineseContent] = useState('')
+  const [fileList, setFileList] = useState<UploadFile[]>([])
+  const [showDropZone, setShowDropZone] = useState(false)
   const replyMutation = useMailReply()
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -89,10 +94,10 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
   }, [position, windowState])
 
   const handleAiGenerated = useCallback((content: string) => {
-    // 将 AI 生成内容展示在弹窗中
+    // AI 返回内容包含"邮件语言回复 --- 中文翻译"两部分，
+    // AiResultModal 会通过分隔符自动拆分为"邮件语言"和"中文对照"两个 tab
     setAiOriginalContent(content)
-    // 生成中文翻译版本（提取纯文本作为中文对照提示）
-    setAiChineseContent(content)
+    setAiChineseContent('') // 由 AiResultModal 从 originalContent 中提取
     setAiResultVisible(true)
   }, [])
 
@@ -222,14 +227,64 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
           </div>
         </div>
 
+        {/* 附件区域 */}
+        {fileList.length > 0 && (
+          <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
+            <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+              <PaperClipOutlined />
+              <span>附件 ({fileList.length})</span>
+            </div>
+            <Upload
+              fileList={fileList}
+              onRemove={(file) => {
+                const index = fileList.indexOf(file)
+                const newFileList = fileList.slice()
+                newFileList.splice(index, 1)
+                setFileList(newFileList)
+              }}
+              beforeUpload={() => false}
+              showUploadList
+            />
+          </div>
+        )}
+
+        {/* 拖拽上传区域 */}
+        {showDropZone && (
+          <div className="px-3 py-2 border-b border-gray-100">
+            <Upload.Dragger
+              multiple
+              showUploadList={false}
+              beforeUpload={() => false}
+              onChange={({ fileList: newFileList }) => {
+                setFileList((prev) => [...prev, ...newFileList])
+                setShowDropZone(false)
+              }}
+            >
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined />
+              </p>
+              <p className="ant-upload-text text-xs">点击或拖拽文件到此处上传附件</p>
+            </Upload.Dragger>
+          </div>
+        )}
+
         {/* 工具栏 */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50">
-          <AiGenerateBtn
-            mailSubject={detail.subject}
-            mailFrom={detail.from.address}
-            mailBody={detail.html || detail.text}
-            onGenerated={handleAiGenerated}
-          />
+          <div className="flex items-center gap-2">
+            <AiGenerateBtn
+              mailSubject={detail.subject}
+              mailFrom={detail.from.address}
+              mailBody={detail.html || detail.text}
+              onGenerated={handleAiGenerated}
+            />
+            <Tooltip title="添加附件">
+              <Button
+                size="small"
+                icon={<PaperClipOutlined />}
+                onClick={() => setShowDropZone((prev) => !prev)}
+              />
+            </Tooltip>
+          </div>
           <Button
             type="primary"
             icon={<SendOutlined />}

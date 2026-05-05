@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react'
-import { Modal, Tabs, Button, message } from 'antd'
-import { CopyOutlined, CheckOutlined, GlobalOutlined, TranslationOutlined } from '@ant-design/icons'
+import { useMemo } from 'react'
+import { Modal, Tabs, Button, message, Tooltip } from 'antd'
+import { CopyOutlined, GlobalOutlined, TranslationOutlined } from '@ant-design/icons'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
 
 interface AiResultModalProps {
   visible: boolean
@@ -10,6 +12,42 @@ interface AiResultModalProps {
   onClose: () => void
 }
 
+function ReadOnlyEditor({ content }: { content: string }) {
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content,
+    editable: false,
+  })
+
+  if (!editor) return null
+
+  return (
+    <div className="rounded-lg overflow-hidden border border-solid border-gray-200">
+      <div className="p-4 max-h-80 overflow-auto bg-gray-50">
+        <EditorContent editor={editor} className="tiptap-readonly-editor" />
+      </div>
+    </div>
+  )
+}
+
+function ChineseReadOnlyEditor({ content }: { content: string }) {
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content,
+    editable: false,
+  })
+
+  if (!editor) return null
+
+  return (
+    <div className="rounded-lg overflow-hidden border border-amber-200">
+      <div className="p-4 max-h-80 overflow-auto bg-amber-50">
+        <EditorContent editor={editor} className="tiptap-readonly-editor" />
+      </div>
+    </div>
+  )
+}
+
 export default function AiResultModal({
   visible,
   originalContent,
@@ -17,13 +55,8 @@ export default function AiResultModal({
   onUse,
   onClose,
 }: AiResultModalProps) {
-  const [copiedOriginal, setCopiedOriginal] = useState(false)
-
   // 从 AI 返回的内容中分离原始语言和中文翻译
-  // AI 通常会返回两部分：原文回复 + 中文翻译
   const { originalPart, chinesePart } = useMemo(() => {
-    // 尝试从内容中提取中文翻译部分
-    // 常见格式：--- 或 【中文翻译】等分隔符
     const separators = [
       /\n---+\s*\n/,
       /\n【中文翻译】\n/,
@@ -42,19 +75,16 @@ export default function AiResultModal({
       }
     }
 
-    // 如果没有分隔符，原文=AI原始回复，中文=同一份内容（用户可手动调整）
     return {
       originalPart: originalContent,
-      chinesePart: chineseContent,
+      chinesePart: chineseContent || originalContent,
     }
   }, [originalContent, chineseContent])
 
   const handleCopyOriginal = async () => {
     try {
       await navigator.clipboard.writeText(originalPart)
-      setCopiedOriginal(true)
       message.success('已复制原文回复')
-      setTimeout(() => setCopiedOriginal(false), 2000)
     } catch {
       message.error('复制失败')
     }
@@ -80,19 +110,16 @@ export default function AiResultModal({
       ),
       children: (
         <div className="relative">
-          <div className="absolute top-0 right-0 z-10">
-            <Button
-              size="small"
-              type={copiedOriginal ? 'primary' : 'default'}
-              icon={copiedOriginal ? <CheckOutlined /> : <CopyOutlined />}
-              onClick={handleCopyOriginal}
-            >
-              {copiedOriginal ? '已复制' : '复制'}
-            </Button>
+          <div className="absolute top-2 right-2 z-10">
+            <Tooltip title="复制原文">
+              <Button
+                size="small"
+                icon={<CopyOutlined />}
+                onClick={handleCopyOriginal}
+              />
+            </Tooltip>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 pr-24 whitespace-pre-wrap text-sm text-gray-800 max-h-80 overflow-auto border border-solid border-gray-200">
-            {originalPart}
-          </div>
+          <ReadOnlyEditor content={originalPart} />
         </div>
       ),
     },
@@ -106,18 +133,16 @@ export default function AiResultModal({
       ),
       children: (
         <div className="relative">
-          <div className="absolute top-0 right-0 z-10">
-            <Button
-              size="small"
-              icon={<CopyOutlined />}
-              onClick={handleCopyChinese}
-            >
-              复制
-            </Button>
+          <div className="absolute top-2 right-2 z-10">
+            <Tooltip title="复制中文">
+              <Button
+                size="small"
+                icon={<CopyOutlined />}
+                onClick={handleCopyChinese}
+              />
+            </Tooltip>
           </div>
-          <div className="bg-amber-50 rounded-lg p-4 pr-24 whitespace-pre-wrap text-sm text-gray-800 max-h-80 overflow-auto border border-amber-200">
-            {chinesePart}
-          </div>
+          <ChineseReadOnlyEditor content={chinesePart} />
         </div>
       ),
     },

@@ -22,9 +22,9 @@ export async function generateReply(
     body: JSON.stringify({
       model: config.model,
       messages: [
-        { role: 'system', content: config.systemPrompt || '你是一个专业的邮件回复助手，请务必使用中文回复邮件。' },
+        { role: 'system', content: config.systemPrompt || '你是一个专业的邮件回复助手。' },
         { role: 'user', content: userContent },
-        { role: 'user', content: '请用中文撰写回复内容。' },
+        { role: 'user', content: '请根据邮件的语言生成回复（如英文邮件用英文回复，中文邮件用中文回复）。同时，请在回复内容之后，用"---"分隔，附上该回复的中文翻译版本，以便用户对照检查内容是否准确。格式如下：\n\n[邮件语言回复内容]\n---\n[中文翻译]' },
       ],
       temperature: 0.7,
     }),
