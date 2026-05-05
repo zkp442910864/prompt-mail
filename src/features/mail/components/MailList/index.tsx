@@ -16,7 +16,7 @@ export default function MailList({ mails, selectedMailId, onSelectMail }: MailLi
   const virtualizer = useVirtualizer({
     count: mails.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 72,
+    estimateSize: () => 44,
     overscan: 5,
   })
 

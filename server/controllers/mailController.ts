@@ -43,7 +43,6 @@ export async function getMailList(req: Request, res: Response) {
   } catch (err) {
     // 透传 imapflow 的详细错误信息（如认证失败、连接超时等）
     let detail = err instanceof Error ? err.message : '获取邮件列表失败'
-    console.log('[getMailList] CATCH entered, message:', detail, 'authFailed:', (err as any).authenticationFailed)
     if ((err as any).authenticationFailed) {
       detail = '邮箱认证失败，请检查账号和授权码是否正确'
     } else if ((err as any).responseText) {

@@ -8,7 +8,7 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ) {
-  console.error('[Error Handler] message:', err.message, 'authenticationFailed:', (err as any).authenticationFailed)
+  console.error('[Error]', err.message)
   if (process.env.NODE_ENV !== 'production') {
     console.error(err.stack)
   }

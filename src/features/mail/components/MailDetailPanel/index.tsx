@@ -1,4 +1,6 @@
-import { Empty } from 'antd'
+import { useState } from 'react'
+import { Empty, Button } from 'antd'
+import { MailOutlined } from '@ant-design/icons'
 import MailDetailHeader from '../MailDetailHeader'
 import MailDetailBody from '../MailDetailBody'
 import MailAttachments from '../MailAttachments'
@@ -13,6 +15,7 @@ export default function MailDetailPanel() {
     state.selectedMailId,
     state.currentEmailConfigId,
   )
+  const [replyVisible, setReplyVisible] = useState(false)
 
   if (!state.currentEmailConfigId) {
     return (
@@ -43,9 +46,9 @@ export default function MailDetailPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       <MailDetailHeader detail={detail} />
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto pb-16">
         <MailDetailBody html={detail.html} text={detail.text} />
         <MailAttachments
           attachments={detail.attachments}
@@ -53,7 +56,27 @@ export default function MailDetailPanel() {
           uid={detail.id}
         />
       </div>
-      <MailReplyEditor detail={detail} emailConfigId={state.currentEmailConfigId!} />
+
+      {/* 底部悬浮回复按钮 */}
+      <div className="absolute bottom-4 right-4">
+        <Button
+          type="primary"
+          shape="circle"
+          size="large"
+          icon={<MailOutlined />}
+          onClick={() => setReplyVisible(true)}
+          className="shadow-lg !w-12 !h-12"
+          style={{ fontSize: 18 }}
+        />
+      </div>
+
+      {/* 悬浮回复小窗 */}
+      <MailReplyEditor
+        detail={detail}
+        emailConfigId={state.currentEmailConfigId!}
+        visible={replyVisible}
+        onClose={() => setReplyVisible(false)}
+      />
     </div>
   )
 }

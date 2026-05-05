@@ -3,9 +3,9 @@ import { describe, it, expect, vi } from 'vitest'
 // Mock DOMPurify for Node.js environment
 vi.mock('dompurify', () => ({
   default: {
-    sanitize: (html: string, config: any) => {
+    sanitize: (_html: string, _config?: any) => {
       // Simple mock that removes script tags and on* attributes
-      let result = html
+      let result = _html
       // Remove script tags
       result = result.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
       // Remove on* event attributes

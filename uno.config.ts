@@ -1,5 +1,12 @@
-import { defineConfig, presetWind, presetIcons } from 'unocss'
+import { defineConfig, presetWind4, presetIcons } from 'unocss'
 
 export default defineConfig({
-  presets: [presetWind(), presetIcons()],
+  presets: [
+    presetWind4({
+      preflights: {
+        reset: true,
+      },
+    }),
+    presetIcons(),
+  ],
 })

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { Button, Divider, message, Tooltip } from 'antd'
+import { Button, message, Tooltip } from 'antd'
 import {
   SendOutlined,
   MinusOutlined,

@@ -1,11 +1,11 @@
+import { useCallback, useState } from 'react'
 import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime'
-import 'dayjs/locale/zh-cn'
-import { PaperClipOutlined, MailOutlined } from '@ant-design/icons'
+import {
+  StarOutlined,
+  StarFilled,
+  PaperClipOutlined,
+} from '@ant-design/icons'
 import type { MailSummary } from '@/types/mail'
-
-dayjs.extend(relativeTime)
-dayjs.locale('zh-cn')
 
 interface MailListItemProps {
   mail: MailSummary
@@ -15,56 +15,93 @@ interface MailListItemProps {
 
 export default function MailListItem({ mail, selected, onClick }: MailListItemProps) {
   const isUnread = !mail.isRead
+  const [starred, setStarred] = useState(false)
+
+  const handleStarClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setStarred((prev) => !prev)
+  }, [])
+
+  /** 格式化日期：今天显示 HH:mm，今年显示 M月D日，跨年显示 YYYY/M/D */
+  const formatDate = (dateStr: string) => {
+    const d = dayjs(dateStr)
+    const now = dayjs()
+    if (d.isSame(now, 'day')) return d.format('HH:mm')
+    if (d.isSame(now, 'year')) return d.format('M月D日')
+    return d.format('YYYY/M/D')
+  }
 
   return (
     <div
       className={`
-        relative px-4 py-3 cursor-pointer transition-all duration-200 border-b border-gray-100
+        flex items-center h-11 px-2 cursor-pointer transition-colors duration-150
+        border-b border-gray-200 select-none
         ${selected
-          ? 'bg-blue-50 border-l-3 border-l-blue-500'
+          ? 'bg-[#c2dbff]'
           : isUnread
-            ? 'bg-white border-l-3 border-l-blue-400 hover:bg-gray-50'
-            : 'bg-white border-l-3 border-l-transparent hover:bg-gray-50'
+            ? 'bg-white hover:bg-[#f2f6fc]'
+            : 'bg-white hover:bg-[#f2f2f2]'
         }
       `}
       onClick={onClick}
     >
-      {/* 第一行：发件人 + 时间 */}
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          {/* 未读圆点指示器 */}
-          {isUnread && (
-            <span className="shrink-0 w-2 h-2 rounded-full bg-blue-500" />
-          )}
-          <span className={`
-            text-sm truncate
-            ${isUnread ? 'text-gray-900 font-bold' : 'text-gray-600 font-normal'}
-          `}>
-            {mail.from.name || mail.from.address}
-          </span>
-        </div>
-        <span className={`text-xs shrink-0 ml-2 ${isUnread ? 'text-blue-500 font-medium' : 'text-gray-400'}`}>
-          {dayjs(mail.date).isToday() ? dayjs(mail.date).format('HH:mm') : dayjs(mail.date).format('MM/DD')}
-        </span>
-      </div>
-
-      {/* 第二行：主题 */}
-      <div className={`
-        text-sm truncate mb-0.5
-        ${isUnread ? 'text-gray-900 font-semibold' : 'text-gray-500 font-normal'}
-      `}>
-        {mail.subject}
-      </div>
-
-      {/* 第三行：摘要 + 附件图标 */}
-      <div className="flex items-center gap-1.5">
-        {mail.hasAttachments && (
-          <PaperClipOutlined className="text-xs text-gray-400 shrink-0" />
+      {/* 左侧操作区：星标 */}
+      <span
+        className="shrink-0 w-7 flex items-center justify-center"
+        onClick={handleStarClick}
+      >
+        {starred ? (
+          <StarFilled className="text-amber-400 text-sm" />
+        ) : (
+          <StarOutlined className="text-gray-300 text-sm hover:text-amber-400" />
         )}
-        <span className="text-xs text-gray-400 truncate">
+      </span>
+
+      {/* 发件人 */}
+      <span
+        className={`
+          shrink-0 w-44 truncate text-[13px] pr-2
+          ${isUnread ? 'text-gray-900 font-bold' : 'text-gray-600 font-normal'}
+        `}
+      >
+        {mail.from.name || mail.from.address}
+      </span>
+
+      {/* 主题 + 摘要（核心内容区） */}
+      <div className="flex-1 min-w-0 flex items-center text-[13px]">
+        <span
+          className={`
+            truncate
+            ${isUnread ? 'text-gray-900 font-bold' : 'text-gray-700 font-normal'}
+          `}
+        >
+          {mail.subject}
+        </span>
+        <span className="mx-1 text-gray-300 shrink-0">—</span>
+        <span
+          className={`
+            truncate
+            ${isUnread ? 'text-gray-500' : 'text-gray-400'}
+          `}
+        >
           {mail.snippet}
         </span>
       </div>
+
+      {/* 附件图标 */}
+      {mail.hasAttachments && (
+        <PaperClipOutlined className="shrink-0 ml-2 text-xs text-gray-400" />
+      )}
+
+      {/* 日期 */}
+      <span
+        className={`
+          shrink-0 w-16 text-right pl-3 text-[12px]
+          ${isUnread ? 'text-gray-700 font-medium' : 'text-gray-400'}
+        `}
+      >
+        {formatDate(mail.date)}
+      </span>
     </div>
   )
 }
