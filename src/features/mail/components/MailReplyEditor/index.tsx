@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import { Button, message, Tooltip, Upload } from 'antd'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { Button, message, Tooltip, Upload, Input, Tag } from 'antd'
 import type { UploadFile } from 'antd'
 import {
   SendOutlined,
@@ -10,6 +10,7 @@ import {
   EditOutlined,
   InboxOutlined,
   PaperClipOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -18,6 +19,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import AiGenerateBtn from '@/features/ai/components/AiGenerateBtn'
 import AiResultModal from '@/features/ai/components/AiResultModal'
 import { useMailReply } from '../../hooks/useMailReply'
+import { extractReplyToEmail, isFromSystemEmail, extractEmailsFromText, isSystemEmail } from '@/utils/emailExtractor'
 import type { MailDetail } from '@/types/mail'
 
 interface MailReplyEditorProps {
@@ -41,6 +43,36 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
   const panelRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [initialized, setInitialized] = useState(false)
+
+  // 从邮件正文中提取客户邮箱，作为回复目标
+  const replyToEmail = useMemo(() => {
+    return extractReplyToEmail(
+      detail.from.address,
+      detail.text || '',
+      detail.html,
+    )
+  }, [detail.from.address, detail.text, detail.html])
+
+  // 是否为系统/通知邮件（发件人不是客户）
+  const isSystemMail = useMemo(() => isFromSystemEmail(detail.from.address), [detail.from.address])
+
+  // 正文中提取到的所有客户邮箱（供用户选择）
+  const bodyEmails = useMemo(() => {
+    const content = detail.html || detail.text || ''
+    return extractEmailsFromText(content).filter(
+      (email) => !isSystemEmail(email) && email !== detail.from.address.toLowerCase(),
+    )
+  }, [detail.html, detail.text, detail.from.address])
+
+  // 可编辑的收件人
+  const [recipientEmail, setRecipientEmail] = useState('')
+
+  // 初始化收件人
+  useEffect(() => {
+    if (visible) {
+      setRecipientEmail(replyToEmail)
+    }
+  }, [visible, replyToEmail])
 
   // 初始位置：右下角
   useEffect(() => {
@@ -95,15 +127,12 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
   }, [position, windowState])
 
   const handleAiGenerated = useCallback((content: string) => {
-    // AI 返回内容包含"邮件语言回复 --- 中文翻译"两部分，
-    // AiResultModal 会通过分隔符自动拆分为"邮件语言"和"中文对照"两个 tab
     setAiOriginalContent(content)
-    setAiChineseContent('') // 由 AiResultModal 从 originalContent 中提取
+    setAiChineseContent('')
     setAiResultVisible(true)
   }, [])
 
   const handleUseContent = useCallback((content: string) => {
-    // AI 返回的内容是 Markdown 格式，需转为 HTML 后填入富文本编辑器
     const html = marked.parse(content, { async: false }) as string
     editor?.commands.setContent(html)
     setAiResultVisible(false)
@@ -117,9 +146,15 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
       return
     }
 
+    const toEmail = recipientEmail.trim()
+    if (!toEmail) {
+      message.warning('请输入收件人邮箱')
+      return
+    }
+
     replyMutation.mutate({
       emailConfigId,
-      to: [detail.from.address],
+      to: [toEmail],
       subject: detail.subject.startsWith('Re: ') ? detail.subject : `Re: ${detail.subject}`,
       body: html,
       inReplyTo: detail.messageId,
@@ -130,7 +165,7 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
 
   if (!visible) return null
 
-  // 最小化状态：只显示一个小条
+  // 最小化状态
   if (windowState === 'minimized') {
     return (
       <div
@@ -216,11 +251,44 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
           </div>
         </div>
 
-        {/* 回复对象 */}
+        {/* 收件人区域 */}
         <div className="px-4 py-2 border-b border-gray-100 bg-gray-50">
-          <span className="text-xs text-gray-500">
-            回复给 <span className="text-gray-700 font-medium">{detail.from.name || detail.from.address}</span>
-          </span>
+          <div className="flex items-center gap-2 mb-1.5">
+            <UserOutlined className="text-gray-400 text-xs" />
+            <span className="text-xs text-gray-500 shrink-0">收件人:</span>
+            {isSystemMail && (
+              <Tag color="orange" className="text-[10px] leading-tight px-1 py-0">
+                系统邮件
+              </Tag>
+            )}
+          </div>
+          <Input
+            size="small"
+            value={recipientEmail}
+            onChange={(e) => setRecipientEmail(e.target.value)}
+            placeholder="输入收件人邮箱"
+            className="text-xs"
+          />
+          {isSystemMail && bodyEmails.length > 0 && (
+            <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+              <span className="text-[10px] text-gray-400 shrink-0">正文中检测到:</span>
+              {bodyEmails.map((email) => (
+                <Tag
+                  key={email}
+                  color={recipientEmail === email ? 'blue' : 'default'}
+                  className="text-[10px] cursor-pointer px-1 py-0"
+                  onClick={() => setRecipientEmail(email)}
+                >
+                  {email}
+                </Tag>
+              ))}
+            </div>
+          )}
+          {isSystemMail && (
+            <div className="text-[10px] text-amber-500 mt-1">
+              ⚠️ 发件人 {detail.from.address} 为系统邮箱，已自动从正文提取客户邮箱
+            </div>
+          )}
         </div>
 
         {/* 编辑器区域 */}

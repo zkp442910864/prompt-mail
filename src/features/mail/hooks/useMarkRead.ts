@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { message } from 'antd'
 import * as mailService from '@/services/mailService'
+import type { MailSummary } from '@/types/mail'
 
-/** 标记邮件已读（乐观更新） */
+/** 标记邮件已读（乐观更新，静默无提示） */
 export function useMarkRead(emailConfigId: string | null) {
   const queryClient = useQueryClient()
 
@@ -13,35 +13,39 @@ export function useMarkRead(emailConfigId: string | null) {
       // 取消正在进行的查询
       await queryClient.cancelQueries({ queryKey: ['mailList'] })
 
-      // 保存当前列表快照
-      const previousList = queryClient.getQueryData(['mailList', { emailConfigId, filter: 'all' }])
+      // 保存所有 mailList 查询的快照，用于回滚
+      const previousLists = new Map<string, unknown>()
+      queryClient.getQueriesData({ queryKey: ['mailList'] }).forEach(([key, data]) => {
+        previousLists.set(JSON.stringify(key), data)
+      })
 
       // 乐观更新：将邮件标记为已读
-      queryClient.setQueriesData<{ data: unknown }>(
+      // 查询数据直接是 MailSummary[]（useMailList 返回 res.data）
+      queryClient.setQueriesData<MailSummary[]>(
         { queryKey: ['mailList'] },
         (old) => {
           if (!old) return old
-          const data = old.data as import('@/types/mail').MailSummary[]
-          return {
-            ...old,
-            data: data.map((mail) =>
-              mail.id === uid ? { ...mail, isRead: true } : mail,
-            ),
-          }
+          return old.map((mail) =>
+            mail.id === uid ? { ...mail, isRead: true } : mail,
+          )
         },
       )
 
-      return { previousList }
+      return { previousLists }
     },
     onError: (_err, _vars, context) => {
-      // 回滚
-      if (context?.previousList) {
-        queryClient.setQueryData(['mailList'], context.previousList)
+      // 回滚所有受影响的查询
+      if (context?.previousLists) {
+        context.previousLists.forEach((data, keyStr) => {
+          const key = JSON.parse(keyStr)
+          queryClient.setQueryData(key, data)
+        })
       }
-      message.error('标记已读失败')
+      console.error('标记已读失败:', _err)
     },
-    onSuccess: () => {
-      message.success('已标记为已读')
+    onSettled: () => {
+      // mutation 结束后刷新列表，确保与后端一致
+      queryClient.invalidateQueries({ queryKey: ['mailList'] })
     },
   })
 }
