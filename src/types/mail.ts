@@ -59,5 +59,14 @@ export interface AiGenerateResponse {
   content: string
 }
 
+export interface AiTranslateRequest {
+  subject: string
+  body: string
+}
+
+export interface AiTranslateResponse {
+  content: string
+}
+
 /** 邮件筛选类型 */
 export type MailFilter = 'all' | 'unread' | 'read'

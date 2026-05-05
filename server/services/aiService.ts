@@ -47,6 +47,54 @@ export async function generateReply(
   return { content }
 }
 
+/** AI 翻译邮件为中文 */
+export async function translateToChinese(
+  config: AIConfig,
+  data: { subject: string; body: string },
+): Promise<AiGenerateResponse> {
+  const url = `${config.apiBaseUrl.replace(/\/+$/, '')}/chat/completions`
+
+  const userContent = [
+    `邮件主题: ${data.subject}`,
+    `邮件正文:\n${data.body}`,
+  ].join('\n\n')
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        {
+          role: 'system',
+          content: '你是一个专业的邮件翻译助手。请将用户提供的邮件内容翻译为中文。只输出翻译结果，不要添加任何解释、注释或额外内容。如果邮件本身就是中文，直接返回原文。',
+        },
+        { role: 'user', content: userContent },
+      ],
+      temperature: 0.3,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`AI API 请求失败 (${response.status}): ${errorText}`)
+  }
+
+  const result = (await response.json()) as {
+    choices: Array<{ message: { content: string } }>
+  }
+
+  const content = result.choices?.[0]?.message?.content
+  if (!content) {
+    throw new Error('AI 返回内容为空')
+  }
+
+  return { content }
+}
+
 /** 测试 AI 连接 */
 export async function testConnection(
   config: Pick<AIConfig, 'apiBaseUrl' | 'apiKey' | 'model'>,

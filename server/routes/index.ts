@@ -26,6 +26,7 @@ attachmentRoutes.get('/:id', attachmentController.downloadAttachment)
 
 const aiRoutes = Router()
 aiRoutes.post('/generate', aiController.generateReply)
+aiRoutes.post('/translate', aiController.translateToChinese)
 
 /** 注册所有路由 */
 export function registerRoutes(app: import('express').Express) {
