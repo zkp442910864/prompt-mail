@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react'
 import MailFilterBar from '../MailFilterBar'
 import MailList from '../MailList'
 import { useMailContext } from '../../context/MailContext'
@@ -13,6 +14,9 @@ export default function MailListPanel() {
     limit: 50,
   })
   const markReadMutation = useMarkRead(state.currentEmailConfigId)
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
+
+  const unreadCount = mails?.filter((m) => !m.isRead).length || 0
 
   const handleSelectMail = (id: string) => {
     dispatch({ type: 'SET_SELECTED_MAIL', payload: id })
@@ -23,9 +27,21 @@ export default function MailListPanel() {
     }
   }
 
+  const handleCheck = useCallback((id: string, checked: boolean) => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev)
+      if (checked) {
+        next.add(id)
+      } else {
+        next.delete(id)
+      }
+      return next
+    })
+  }, [])
+
   return (
     <div className="flex flex-col h-full border-r border-gray-200">
-      <MailFilterBar onRefresh={() => refetch()} loading={isLoading} />
+      <MailFilterBar onRefresh={() => refetch()} loading={isLoading} unreadCount={unreadCount} />
       {isLoading ? (
         <Loading />
       ) : (
@@ -33,7 +49,9 @@ export default function MailListPanel() {
           <MailList
             mails={mails || []}
             selectedMailId={state.selectedMailId}
+            checkedIds={checkedIds}
             onSelectMail={handleSelectMail}
+            onCheck={handleCheck}
           />
         </div>
       )}

@@ -7,10 +7,12 @@ import type { MailSummary } from '@/types/mail'
 interface MailListProps {
   mails: MailSummary[]
   selectedMailId: string | null
+  checkedIds: Set<string>
   onSelectMail: (id: string) => void
+  onCheck: (id: string, checked: boolean) => void
 }
 
-export default function MailList({ mails, selectedMailId, onSelectMail }: MailListProps) {
+export default function MailList({ mails, selectedMailId, checkedIds, onSelectMail, onCheck }: MailListProps) {
   const parentRef = useRef<HTMLDivElement>(null)
 
   const virtualizer = useVirtualizer({
@@ -53,6 +55,8 @@ export default function MailList({ mails, selectedMailId, onSelectMail }: MailLi
               <MailListItem
                 mail={mail}
                 selected={mail.id === selectedMailId}
+                checked={checkedIds.has(mail.id)}
+                onCheck={(checked) => onCheck(mail.id, checked)}
                 onClick={() => onSelectMail(mail.id)}
               />
             </div>

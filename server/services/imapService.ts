@@ -84,9 +84,12 @@ export async function fetchMailList(
         })
       }
 
-      // 按 UID 倒序排列（UID 递增，最新的 UID 最大）
-      // 不使用 envelope.date 排序，因为信封日期可能是发送方声明的时间，不可靠
-      messages.sort((a, b) => Number(b.id) - Number(a.id))
+      // 按日期降序排列（最新的在前），UID 作为次要排序
+      messages.sort((a, b) => {
+        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
+        if (dateDiff !== 0) return dateDiff
+        return Number(b.id) - Number(a.id)
+      })
       return messages
     } finally {
       lock.release()

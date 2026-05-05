@@ -5,15 +5,18 @@ import {
   StarFilled,
   PaperClipOutlined,
 } from '@ant-design/icons'
+import { Checkbox } from 'antd'
 import type { MailSummary } from '@/types/mail'
 
 interface MailListItemProps {
   mail: MailSummary
   selected?: boolean
+  checked?: boolean
+  onCheck?: (checked: boolean) => void
   onClick?: () => void
 }
 
-export default function MailListItem({ mail, selected, onClick }: MailListItemProps) {
+export default function MailListItem({ mail, selected, checked, onCheck, onClick }: MailListItemProps) {
   const isUnread = !mail.isRead
   const [starred, setStarred] = useState(false)
 
@@ -21,6 +24,11 @@ export default function MailListItem({ mail, selected, onClick }: MailListItemPr
     e.stopPropagation()
     setStarred((prev) => !prev)
   }, [])
+
+  const handleCheckChange = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    onCheck?.(!checked)
+  }, [checked, onCheck])
 
   /** 格式化日期：今天显示 HH:mm，今年显示 M月D日，跨年显示 YYYY/M/D */
   const formatDate = (dateStr: string) => {
@@ -34,8 +42,8 @@ export default function MailListItem({ mail, selected, onClick }: MailListItemPr
   return (
     <div
       className={`
-        flex items-center h-11 px-2 cursor-pointer transition-colors duration-150
-        border-b border-gray-200 select-none
+        flex items-center h-11 px-1 cursor-pointer transition-colors duration-150
+        border-b border-gray-100 select-none
         ${selected
           ? 'bg-[#c2dbff]'
           : isUnread
@@ -45,11 +53,18 @@ export default function MailListItem({ mail, selected, onClick }: MailListItemPr
       `}
       onClick={onClick}
     >
-      {/* 左侧操作区：星标 */}
-      <span
-        className="shrink-0 w-7 flex items-center justify-center"
-        onClick={handleStarClick}
-      >
+      {/* 复选框 */}
+      <span className="shrink-0 w-7 flex items-center justify-center" onClick={handleCheckChange}>
+        <Checkbox checked={checked} />
+      </span>
+
+      {/* 未读指示点 */}
+      <span className="shrink-0 w-4 flex items-center justify-center">
+        {isUnread && <span className="w-2 h-2 rounded-full bg-blue-500" />}
+      </span>
+
+      {/* 星标 */}
+      <span className="shrink-0 w-6 flex items-center justify-center" onClick={handleStarClick}>
         {starred ? (
           <StarFilled className="text-amber-400 text-sm" />
         ) : (
@@ -60,14 +75,14 @@ export default function MailListItem({ mail, selected, onClick }: MailListItemPr
       {/* 发件人 */}
       <span
         className={`
-          shrink-0 w-44 truncate text-[13px] pr-2
+          shrink-0 w-[180px] truncate text-[13px] pr-2
           ${isUnread ? 'text-gray-900 font-bold' : 'text-gray-600 font-normal'}
         `}
       >
         {mail.from.name || mail.from.address}
       </span>
 
-      {/* 主题 + 摘要（核心内容区） */}
+      {/* 主题 + 摘要 */}
       <div className="flex-1 min-w-0 flex items-center text-[13px]">
         <span
           className={`
@@ -77,12 +92,9 @@ export default function MailListItem({ mail, selected, onClick }: MailListItemPr
         >
           {mail.subject}
         </span>
-        <span className="mx-1 text-gray-300 shrink-0">—</span>
+        <span className="mx-1 text-gray-300 shrink-0">-</span>
         <span
-          className={`
-            truncate
-            ${isUnread ? 'text-gray-500' : 'text-gray-400'}
-          `}
+          className={`truncate text-[12px] ${isUnread ? 'text-gray-500' : 'text-gray-400'}`}
         >
           {mail.snippet}
         </span>

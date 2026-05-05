@@ -22,8 +22,9 @@ export async function generateReply(
     body: JSON.stringify({
       model: config.model,
       messages: [
-        { role: 'system', content: config.systemPrompt || '你是一个专业的邮件回复助手。' },
+        { role: 'system', content: config.systemPrompt || '你是一个专业的邮件回复助手，请务必使用中文回复邮件。' },
         { role: 'user', content: userContent },
+        { role: 'user', content: '请用中文撰写回复内容。' },
       ],
       temperature: 0.7,
     }),
