@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Empty, Button, Tooltip, Spin } from 'antd'
 import { MailOutlined, TranslationOutlined } from '@ant-design/icons'
 import MailDetailHeader from '../MailDetailHeader'
@@ -9,7 +9,6 @@ import { useMailContext } from '../../context/MailContext'
 import { useMailDetail } from '../../hooks/useMailDetail'
 import { useAiTranslate } from '@/features/ai/hooks/useAiTranslate'
 import { useAiConfig } from '@/features/config/hooks/useAiConfig'
-import { marked } from 'marked'
 import { sanitizeHtml } from '@/utils/sanitizer'
 import Loading from '@/components/Loading'
 
@@ -25,6 +24,12 @@ export default function MailDetailPanel() {
 
   const translateMutation = useAiTranslate()
   const { data: aiConfigs } = useAiConfig()
+
+  /** 判断翻译结果是否为 HTML（后端针对 HTML 邮件返回 HTML 格式翻译） */
+  const isTranslatedHtml = useMemo(() => {
+    if (!translatedContent) return false
+    return /<[a-zA-Z][^>]*>/.test(translatedContent)
+  }, [translatedContent])
 
   const handleTranslate = async () => {
     if (!detail) return
@@ -100,10 +105,16 @@ export default function MailDetailPanel() {
               查看原文
             </Button>
           </div>
-          <div
-            className="px-6 py-4 mail-body"
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(marked.parse(translatedContent, { async: false }) as string) }}
-          />
+          {isTranslatedHtml ? (
+            <div
+              className="px-6 py-4 mail-body"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(translatedContent) }}
+            />
+          ) : (
+            <div className="px-6 py-4 whitespace-pre-wrap text-gray-700">
+              {translatedContent}
+            </div>
+          )}
           <MailAttachments
             attachments={detail.attachments}
             emailConfigId={state.currentEmailConfigId!}

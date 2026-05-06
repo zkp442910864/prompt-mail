@@ -18,7 +18,7 @@
     "@tiptap/react": "^2.0.0",
     "@tiptap/starter-kit": "^2.0.0",
     "ahooks": "^3.0.0",
-    "antd": "^5.0.0",
+    "antd": "^6.3.7",
     "axios": "^1.7.0",
     "cors": "^2.8.0",
     "dayjs": "^1.11.0",

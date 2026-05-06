@@ -54,6 +54,21 @@ export async function translateToChinese(
 ): Promise<AiGenerateResponse> {
   const url = `${config.apiBaseUrl.replace(/\/+$/, '')}/chat/completions`
 
+  // 判断 body 是否包含 HTML
+  const isHtml = /<[a-zA-Z][^>]*>/.test(data.body)
+
+  const systemPrompt = isHtml
+    ? `你是一个专业的邮件翻译助手。请将用户提供的 HTML 邮件内容翻译为中文。
+
+重要规则：
+1. 必须保持原有的 HTML 结构完全不变（包括表格、div、span 等所有标签及其嵌套关系）
+2. 只翻译标签之间的文字内容，不要修改任何 HTML 标签、属性、class、style
+3. 保持原有的样式属性（如 style、color、bgcolor 等）不变
+4. 如果文字本身就是中文，保持不变
+5. 只输出翻译后的完整 HTML，不要添加任何解释、注释或额外内容
+6. 不要用 Markdown 代码块包裹输出`
+    : `你是一个专业的邮件翻译助手。请将用户提供的邮件内容翻译为中文。只输出翻译结果，不要添加任何解释、注释或额外内容。如果邮件本身就是中文，直接返回原文。`
+
   const userContent = [
     `邮件主题: ${data.subject}`,
     `邮件正文:\n${data.body}`,
@@ -68,10 +83,7 @@ export async function translateToChinese(
     body: JSON.stringify({
       model: config.model,
       messages: [
-        {
-          role: 'system',
-          content: '你是一个专业的邮件翻译助手。请将用户提供的邮件内容翻译为中文。只输出翻译结果，不要添加任何解释、注释或额外内容。如果邮件本身就是中文，直接返回原文。',
-        },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent },
       ],
       temperature: 0.3,
@@ -87,10 +99,13 @@ export async function translateToChinese(
     choices: Array<{ message: { content: string } }>
   }
 
-  const content = result.choices?.[0]?.message?.content
+  let content = result.choices?.[0]?.message?.content
   if (!content) {
     throw new Error('AI 返回内容为空')
   }
+
+  // 清理 AI 可能包裹的 Markdown 代码块标记
+  content = content.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '')
 
   return { content }
 }
