@@ -16,6 +16,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { marked } from 'marked'
 import Placeholder from '@tiptap/extension-placeholder'
+import dayjs from 'dayjs'
 import AiGenerateBtn from '@/features/ai/components/AiGenerateBtn'
 import AiResultModal from '@/features/ai/components/AiResultModal'
 import { useMailReply } from '../../hooks/useMailReply'
@@ -139,6 +140,41 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
     message.success('已填入回复内容')
   }, [editor])
 
+  /** 构建原始邮件引用 HTML（Gmail 风格引用块） */
+  const buildQuoteHtml = useCallback((detail: MailDetail): string => {
+    const sender = detail.from.name
+      ? `${detail.from.name} <${detail.from.address}>`
+      : detail.from.address
+    const date = dayjs(detail.date).format('YYYY年M月D日 HH:mm')
+    const subject = detail.subject
+
+    // 引用头：On ... wrote:
+    const quoteHeader = `<p style="margin:0;padding:0;">在 ${date}，${sender} 写道：</p>`
+
+    // 引用正文：优先用 HTML，回退到纯文本
+    let quotedBody: string
+    if (detail.html) {
+      quotedBody = detail.html
+    } else if (detail.text) {
+      // 纯文本转 HTML：换行→<br>，保留空格
+      quotedBody = detail.text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>')
+    } else {
+      quotedBody = '<p>(邮件正文为空)</p>'
+    }
+
+    // 包裹在 blockquote 中（左侧蓝色边框 + 缩进，标准邮件引用样式）
+    return `
+      ${quoteHeader}
+      <blockquote style="margin:4px 0 0 0;padding:4px 12px;border-left:3px solid #ccc;color:#555;">
+        ${quotedBody}
+      </blockquote>
+    `.trim()
+  }, [])
+
   const handleSend = async () => {
     const html = editor?.getHTML() || ''
     if (!html || html === '<p></p>') {
@@ -152,11 +188,15 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
       return
     }
 
+    // 拼接：回复内容 + 原文引用
+    const quoteHtml = buildQuoteHtml(detail)
+    const fullBody = `${html}<br><br>${quoteHtml}`
+
     replyMutation.mutate({
       emailConfigId,
       to: [toEmail],
       subject: detail.subject.startsWith('Re: ') ? detail.subject : `Re: ${detail.subject}`,
-      body: html,
+      body: fullBody,
       inReplyTo: detail.messageId,
     })
 
