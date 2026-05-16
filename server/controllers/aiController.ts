@@ -5,7 +5,7 @@ import { success, fail, error } from '../utils/response.js'
 
 /** AI 生成回复 */
 export async function generateReply(req: Request, res: Response) {
-  const { subject, from, body, prompt } = req.body
+  const { subject, from, body, prompt, extraPrompt } = req.body
 
   if (!subject || !from || !body) {
     fail(res, '参数校验失败：subject、from、body 不能为空', 400)
@@ -26,6 +26,7 @@ export async function generateReply(req: Request, res: Response) {
       from,
       body,
       prompt: prompt || config.systemPrompt || '',
+      extraPrompt,
     })
     success(res, result, '生成成功')
   } catch (err) {

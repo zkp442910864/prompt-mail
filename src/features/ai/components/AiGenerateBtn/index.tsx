@@ -1,4 +1,5 @@
-import { Button, message } from 'antd'
+import { useState } from 'react'
+import { Button, message, Input, Popover } from 'antd'
 import { RobotOutlined } from '@ant-design/icons'
 import { useAiGenerate } from '../../hooks/useAiGenerate'
 import { useAiConfig } from '@/features/config/hooks/useAiConfig'
@@ -17,6 +18,8 @@ export default function AiGenerateBtn({
   mailBody,
   onGenerated,
 }: AiGenerateBtnProps) {
+  const [extraPrompt, setExtraPrompt] = useState('')
+  const [popoverOpen, setPopoverOpen] = useState(false)
   const generateMutation = useAiGenerate()
   const { data: aiConfigs } = useAiConfig()
 
@@ -32,24 +35,68 @@ export default function AiGenerateBtn({
       from: mailFrom,
       body: mailBody,
       prompt: aiConfig.systemPrompt || '',
+      extraPrompt: extraPrompt.trim() || undefined,
     }
+
+    setPopoverOpen(false)
 
     try {
       const result = await generateMutation.mutateAsync(data)
       onGenerated(result.data.content)
-      message.success('AI 回复生成成功')
     } catch {
       // 错误已在拦截器中处理
     }
   }
 
+  const popoverContent = (
+    <div style={{ width: 280 }}>
+      <div className="text-xs text-gray-500 mb-2">
+        输入额外提示词，指导 AI 生成更符合需求的回复
+      </div>
+      <Input.TextArea
+        value={extraPrompt}
+        onChange={(e) => setExtraPrompt(e.target.value)}
+        placeholder="例如：语气要礼貌、强调退款政策、用日语回复..."
+        autoSize={{ minRows: 2, maxRows: 4 }}
+        className="text-xs"
+        onPressEnter={(e) => {
+          if (!e.shiftKey) {
+            e.preventDefault()
+            handleGenerate()
+          }
+        }}
+      />
+      <div className="flex justify-end mt-2">
+        <Button
+          type="primary"
+          size="small"
+          icon={<RobotOutlined />}
+          onClick={handleGenerate}
+          loading={generateMutation.isPending}
+        >
+          生成回复
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
-    <Button
-      icon={<RobotOutlined />}
-      onClick={handleGenerate}
-      loading={generateMutation.isPending}
+    <Popover
+      content={popoverContent}
+      title="AI 生成回复"
+      trigger="click"
+      open={popoverOpen}
+      onOpenChange={setPopoverOpen}
+      placement="topLeft"
     >
-      AI 生成
-    </Button>
+      <Button
+        icon={<RobotOutlined />}
+        onClick={() => setPopoverOpen(true)}
+        loading={generateMutation.isPending}
+        size="small"
+      >
+        AI 生成
+      </Button>
+    </Popover>
   )
 }

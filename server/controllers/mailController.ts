@@ -16,7 +16,7 @@ export async function getMailList(req: Request, res: Response) {
   const emailConfigId = getStr(req.query.emailConfigId)
   const folder = getStr(req.query.folder) || 'INBOX'
   const filter = getStr(req.query.filter) || 'all'
-  const limit = Number(getStr(req.query.limit)) || 50
+  const limit = Number(getStr(req.query.limit)) || 100
 
   if (!emailConfigId) {
     fail(res, '参数校验失败：emailConfigId 不能为空', 400)

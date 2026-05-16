@@ -98,6 +98,7 @@ export interface AiGenerateRequest {
   from: string
   body: string
   prompt: string
+  extraPrompt?: string
 }
 
 export interface AiGenerateResponse {

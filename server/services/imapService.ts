@@ -37,7 +37,7 @@ export async function testConnection(config: EmailConfig): Promise<boolean> {
 export async function fetchMailList(
   config: EmailConfig,
   folder = 'INBOX',
-  limit = 50,
+  limit = 100,
 ): Promise<MailSummary[]> {
   const client = createImapClient(config)
   let connected = false

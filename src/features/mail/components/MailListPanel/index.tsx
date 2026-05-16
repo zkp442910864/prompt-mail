@@ -11,7 +11,7 @@ export default function MailListPanel() {
   const { data: mails, isLoading, refetch } = useMailList({
     emailConfigId: state.currentEmailConfigId || '',
     filter: state.filter,
-    limit: 50,
+    limit: 100,
   })
   const markReadMutation = useMarkRead(state.currentEmailConfigId)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
