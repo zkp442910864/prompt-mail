@@ -17,6 +17,7 @@ export async function getMailList(req: Request, res: Response) {
   const folder = getStr(req.query.folder) || 'INBOX'
   const filter = getStr(req.query.filter) || 'all'
   const limit = Number(getStr(req.query.limit)) || 100
+  const keyword = getStr(req.query.keyword)
 
   if (!emailConfigId) {
     fail(res, '参数校验失败：emailConfigId 不能为空', 400)
@@ -30,7 +31,7 @@ export async function getMailList(req: Request, res: Response) {
   }
 
   try {
-    let mails = await imapService.fetchMailList(config, folder, limit)
+    let mails = await imapService.fetchMailList(config, folder, limit, keyword || undefined)
 
     // 本地筛选
     if (filter === 'unread') {

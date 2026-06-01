@@ -42,30 +42,34 @@ export function isSystemEmail(email: string): boolean {
  * 从邮件中提取回复目标邮箱
  * 
  * 策略：
- * 1. 先从正文提取所有邮箱
- * 2. 过滤掉系统/通知邮箱
- * 3. 如果有非系统邮箱，返回第一个作为回复目标
- * 4. 如果正文没有客户邮箱，回退到 from 地址
+ * 1. 如果发件人不是系统/通知邮箱 → 直接使用发件人地址（正常邮件的合理回复目标）
+ * 2. 如果发件人是系统邮箱（如 Shopify notifications） → 从正文中提取客户邮箱
+ * 3. 正文中也没找到 → 回退到发件人地址
  */
 export function extractReplyToEmail(
   fromAddress: string,
   bodyText: string,
   bodyHtml?: string,
 ): string {
-  // 优先从 HTML 正文中提取（更完整），否则从纯文本提取
+  // 非系统邮箱 → 就是客户本人，直接回复
+  if (!isSystemEmail(fromAddress)) {
+    return fromAddress
+  }
+
+  // 系统邮箱 → 从正文提取客户邮箱
   const content = bodyHtml || bodyText || ''
   const emails = extractEmailsFromText(content)
 
-  // 过滤掉系统邮箱和 from 地址本身
+  // 过滤掉系统邮箱，保留客户邮箱
   const customerEmails = emails.filter(
-    (email) => !isSystemEmail(email) && email !== fromAddress.toLowerCase(),
+    (email) => !isSystemEmail(email),
   )
 
   if (customerEmails.length > 0) {
     return customerEmails[0]!
   }
 
-  // 回退到 from 地址
+  // 正文中也没找到客户邮箱，回退到 from 地址
   return fromAddress
 }
 

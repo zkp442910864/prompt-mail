@@ -17,6 +17,7 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<Navigate to="/inbox" replace />} />
               <Route path="/inbox" element={<InboxPage />} />
+              <Route path="/inbox/:mailId" element={<InboxPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Routes>

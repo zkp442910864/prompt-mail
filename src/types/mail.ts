@@ -26,6 +26,7 @@ export interface MailDetail {
   from: EmailAddress
   to: EmailAddress[]
   cc: EmailAddress[]
+  replyTo: EmailAddress[]
   date: string
   messageId: string
   text: string
@@ -38,6 +39,7 @@ export interface MailListParams {
   filter?: 'all' | 'unread' | 'read'
   limit?: number
   emailConfigId: string
+  keyword?: string
 }
 
 export interface MailReplyRequest {

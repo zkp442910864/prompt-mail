@@ -45,25 +45,36 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [initialized, setInitialized] = useState(false)
 
-  // 从邮件正文中提取客户邮箱，作为回复目标
+  // 从邮件上下文中提取正确的回复邮箱地址
+  // 优先级：replyTo 头 > 正文提取（系统邮件） > from 地址
   const replyToEmail = useMemo(() => {
+    // 1. 如果有 replyTo 头，优先使用
+    if (detail.replyTo && detail.replyTo.length > 0 && detail.replyTo[0]!.address) {
+      return detail.replyTo[0]!.address
+    }
+    // 2. 使用正文提取逻辑
     return extractReplyToEmail(
       detail.from.address,
       detail.text || '',
       detail.html,
     )
-  }, [detail.from.address, detail.text, detail.html])
+  }, [detail.from.address, detail.text, detail.html, detail.replyTo])
 
   // 是否为系统/通知邮件（发件人不是客户）
   const isSystemMail = useMemo(() => isFromSystemEmail(detail.from.address), [detail.from.address])
 
-  // 正文中提取到的所有客户邮箱（供用户选择）
+  // 正文中提取到的所有邮箱（供用户选择候选地址）
   const bodyEmails = useMemo(() => {
     const content = detail.html || detail.text || ''
-    return extractEmailsFromText(content).filter(
-      (email) => !isSystemEmail(email) && email !== detail.from.address.toLowerCase(),
-    )
-  }, [detail.html, detail.text, detail.from.address])
+    const emails = extractEmailsFromText(content)
+    // 对于系统邮件：只保留非系统邮箱
+    // 对于普通邮件：也保留 from 地址，让用户可以切换
+    if (isSystemMail) {
+      return emails.filter((email) => !isSystemEmail(email))
+    }
+    // 普通邮件：列出所有非系统邮箱 + from 地址（去重）
+    return [...new Set([detail.from.address.toLowerCase(), ...emails.filter((e) => !isSystemEmail(e))])]
+  }, [detail.html, detail.text, detail.from.address, isSystemMail])
 
   // 可编辑的收件人
   const [recipientEmail, setRecipientEmail] = useState('')
@@ -146,7 +157,6 @@ export default function MailReplyEditor({ detail, emailConfigId, visible, onClos
       ? `${detail.from.name} <${detail.from.address}>`
       : detail.from.address
     const date = dayjs(detail.date).format('YYYY年M月D日 HH:mm')
-    const subject = detail.subject
 
     // 引用头：On ... wrote:
     const quoteHeader = `<p style="margin:0;padding:0;">在 ${date}，${sender} 写道：</p>`
