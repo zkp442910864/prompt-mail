@@ -1,5 +1,73 @@
 import type { AIConfig, AiGenerateRequest, AiGenerateResponse } from '../types/index.js'
 
+/** 最大 body 长度（字符数），超过则截断避免 token 超限 */
+const MAX_BODY_LENGTH = 8000
+
+/**
+ * 清理 HTML，移除可能导致 AI 调用失败的内容：
+ * - base64 图片（可能几 MB，远超 token 限制）
+ * - cid 引用图片（无实际内容，增加无效 token）
+ * - style/script 标签块
+ * - 注释
+ */
+function stripHtmlForAI(html: string): string {
+  // 移除 <img> 标签（base64 图片是主要元凶）
+  let cleaned = html.replace(/<img[^>]*\/?>/gi, '')
+  // 移除 <style>...</style> 块
+  cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+  // 移除 <script>...</script> 块
+  cleaned = cleaned.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+  // 移除 HTML 注释
+  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '')
+  // 移除行内 base64 data URI（src="data:..." 等残留）
+  cleaned = cleaned.replace(/\s(src|href|background|poster)="data:[^"]*"/gi, ' $1=""')
+  // 压缩连续空白行
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n')
+  return cleaned.trim()
+}
+
+/** 将 HTML 转为纯文本，作为 AI body 最后的兜底 */
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/** 准备发送给 AI 的 body 内容：清洗 HTML → 截断 → 兜底纯文本 */
+function prepareBody(rawBody: string): string {
+  let body = rawBody
+
+  // 检测是否为 HTML
+  const isHtml = /<[a-zA-Z][^>]*>/.test(body)
+
+  if (isHtml) {
+    body = stripHtmlForAI(body)
+  }
+
+  // 截断过长内容
+  if (body.length > MAX_BODY_LENGTH) {
+    if (isHtml) {
+      // HTML 太长 → 转纯文本（去掉所有标签后应该会短很多）
+      body = htmlToPlainText(body)
+    }
+    if (body.length > MAX_BODY_LENGTH) {
+      body = body.slice(0, MAX_BODY_LENGTH) + '\n...(内容已截断)'
+    }
+  }
+
+  return body
+}
+
 /** 调用 OpenAI 兼容 API 生成回复 */
 export async function generateReply(
   config: AIConfig,
@@ -7,10 +75,12 @@ export async function generateReply(
 ): Promise<AiGenerateResponse> {
   const url = `${config.apiBaseUrl.replace(/\/+$/, '')}/chat/completions`
 
+  const cleanedBody = prepareBody(data.body)
+
   const userContent = [
     `邮件主题: ${data.subject}`,
     `发件人: ${data.from}`,
-    `邮件正文:\n${data.body}`,
+    `邮件正文:\n${cleanedBody}`,
   ].join('\n\n')
 
   // 构建额外提示词指令
@@ -59,8 +129,10 @@ export async function translateToChinese(
 ): Promise<AiGenerateResponse> {
   const url = `${config.apiBaseUrl.replace(/\/+$/, '')}/chat/completions`
 
+  const cleanedBody = prepareBody(data.body)
+
   // 判断 body 是否包含 HTML
-  const isHtml = /<[a-zA-Z][^>]*>/.test(data.body)
+  const isHtml = /<[a-zA-Z][^>]*>/.test(cleanedBody)
 
   const systemPrompt = isHtml
     ? `你是一个专业的邮件翻译助手。请将用户提供的 HTML 邮件内容翻译为中文。
@@ -76,7 +148,7 @@ export async function translateToChinese(
 
   const userContent = [
     `邮件主题: ${data.subject}`,
-    `邮件正文:\n${data.body}`,
+    `邮件正文:\n${cleanedBody}`,
   ].join('\n\n')
 
   const response = await fetch(url, {
